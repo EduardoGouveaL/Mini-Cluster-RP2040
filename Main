@@ -1,0 +1,89 @@
+/************************************************************ 
+ * Date :             04/09/2024                            * 
+ * Update :           04/09/2024                            *
+ * Authors :          Arthur Ferreira Rodrigues             *
+ *                    Eduardo Gouvêa Lemes                  * 
+ *                    Joelton da Silva Santana              *
+ *                    Rafael Daniel Nascimento Oliveira     *
+ *                    Rodrigo Cavalcanti Alexandrino        *
+ * Institution :      FATEC Santo André                     * 
+ * INPUT :                                                  *
+ * OUTPUT :                                                 *
+ ************************************************************/
+
+#include "ssd1306.h"
+#include "pico/stdlib.h"
+#include "hardware/i2c.h"
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include <ctype.h>
+#include "hardware/gpio.h"
+
+#define PWM_IN  0
+
+uint8_t display_buffer [128 * SSD1306_HEIGHT / 8] = {0};
+uint8_t update_trip_meter = 0;
+uint8_t update_total_odometer = 0;
+
+static uint8_t edge_count_partial = 0;
+static uint8_t edge_count_total = 0;
+
+void system_init (void);
+void up_odo_parcial (void);
+void up_odo_total (void);
+void trip_meter (void);
+void total_odometer (void);
+
+int main (void)
+{
+  stdio_init_all ();
+  system_init ();
+  SSD1306_init ();
+
+  while (true)
+  {
+
+  }
+}
+
+void system_init (void)
+{
+  gpio_init (PWM_IN);
+  gpio_set_dir (PWM_IN, GPIO_IN);
+
+  gpio_set_irq_enabled_with_callback (PWM_IN, GPIO_IRQ_EDGE_FALL, true, (gpio_irq_callback_t)&up_odo_parcial);
+  gpio_set_irq_enabled_with_callback (PWM_IN, GPIO_IRQ_EDGE_FALL, true, (gpio_irq_callback_t)&up_odo_total);
+}
+
+void up_odo_parcial (uint gpio)
+{
+  if(gpio == PWM_IN)
+  {
+    if (edge_count_partial == 500)
+    {
+      update_trip_meter = 1;
+      edge_count_partial = 0;
+    }
+    else
+    {
+      edge_count_partial++;
+    }
+  }
+}
+
+void up_odo_total (uint gpio)
+{
+  if(gpio == PWM_IN)
+  {
+    if (edge_count_total == 5000)
+    {
+      update_total_odometer = 1;
+      edge_count_total = 0;
+    }
+    else
+    {
+      edge_count_total++;
+    }
+  }
+}
